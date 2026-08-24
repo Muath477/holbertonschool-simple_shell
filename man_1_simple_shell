@@ -1,0 +1,75 @@
+.TH SIMPLE_SHELL 1 "August 2026" "hsh 1.0" "User Commands"
+.SH NAME
+hsh \- a simple UNIX command line interpreter
+.SH SYNOPSIS
+.B ./hsh
+.SH DESCRIPTION
+.B hsh
+is a small shell that reads command lines and runs them. It works in two
+modes. In interactive mode it prints the prompt
+.B ($)
+and waits for you to type a command. In non\-interactive mode it reads
+commands from a pipe or a file, one command per line, with no prompt.
+.PP
+Each line is split into words separated by spaces or tabs. The first word
+is the program to run and the remaining words are passed to it as
+arguments. The command must be given as a full path, for example
+.B /bin/ls
+\- this version does not search the
+.B PATH
+environment variable.
+.PP
+After a command finishes, the prompt is shown again (in interactive mode)
+and the shell waits for the next line.
+.SH EXECUTION
+For every command,
+.B hsh
+creates a child process with
+.BR fork (2)
+and replaces it with the requested program using
+.BR execve (2).
+The shell (the parent) waits for the child to finish with
+.BR waitpid (2)
+before reading the next command.
+.SH EXIT
+The shell exits when it reaches end\-of\-file, with the exit status of the
+last command it ran. In interactive mode end\-of\-file is sent by pressing
+.B Ctrl+D
+on an empty line.
+.SH ERRORS
+If a command cannot be run, an error message is printed to standard error
+and the shell continues. It matches the message
+.BR sh (1)
+prints, except the program name is
+.BR argv[0]
+instead of
+.BR sh :
+.PP
+.RS
+./hsh: 1: qwerty: not found
+.RE
+.PP
+The number is the line number of the command that failed.
+.SH EXAMPLES
+Interactive:
+.PP
+.RS
+$ ./hsh
+.br
+($) /bin/ls
+.br
+($) /bin/echo hello world
+.br
+($) Ctrl+D
+.RE
+.PP
+Non\-interactive:
+.PP
+.RS
+$ echo "/bin/ls" | ./hsh
+.RE
+.SH BUGS
+No PATH search, no built\-in commands, and no handling of pipes,
+redirections, logical operators, or quoting.
+.SH AUTHORS
+Sarah Ali Alshahrani, Muath Hassan Almutairi
