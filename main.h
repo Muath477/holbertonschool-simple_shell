@@ -13,5 +13,7 @@
 
 /* Global environment variable prototype for execve */
 extern char **environ;
-
+char *_getenv(const char *name);
+char *get_cmd_path(char *cmd);
+/* to call the envir from the library to get the whole path */ 
 #endif /* MAIN_H */
