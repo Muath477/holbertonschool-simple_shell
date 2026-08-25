@@ -1,58 +1,46 @@
 #include "main.h"
 
 /**
- * main - Entry point for simple shell 0.1 handling spaces
- * @ac: Unused argument count
- * @av: Argument vector for error reporting
- *
+ * main - Simple Shell with argument handling using strtok
+ * as Unused argument count
+ * av Argument vector for error output
  * Return: Always 0 on success.
  */
 int main(int ac, char **av)
 {
-	char *line = NULL, *start;
+	char *line = NULL;
 	size_t len = 0;
 	ssize_t read_bytes;
 	pid_t child_pid;
-	int status;
-	char *args[2];
-	(void)ac;
-
+	int status, i;
+	char *args[64];
+	char *token;
+	(void)ac; 
+	/** all virables we need in the code */
 	while (1)
 	{
-		if (isatty(STDIN_FILENO))
-			write(STDOUT_FILENO, "#cisfun$ ", 9);
+	if (isatty(STDIN_FILENO))
+	write(STDOUT_FILENO, "#cisfun$ ", 9);
 
-		read_bytes = getline(&line, &len, stdin);
-		if (read_bytes == -1)
+	read_bytes = getline(&line, &len, stdin);
+	if (read_bytes == -1)
+	{
+		free(line);
+		break;
+	}
+	/** loop helps to see if the =order interactive or no */
+	i = 0;
+		token = strtok(line, " \t\r\n\a");
+		while (token != NULL && i < 63)
 		{
-			free(line);
-			break;
+			args[i] = token;
+			token = strtok(NULL, " \t\r\n\a");
+			i++;
 		}
-
-		/* 1. Remove newline at the end */
-		if (line[read_bytes - 1] == '\n')
-			line[read_bytes - 1] = '\0';
-
-		/* 2. Skip leading spaces */
-		start = line;
-		while (*start == ' ' || *start == '\t')
-			start++;
-
-		/* 3. Skip empty line or lines with spaces only */
-		if (*start == '\0')
+		args[i] = NULL;
+		/** token size input line into args array */
+		if (args[0] == NULL)
 			continue;
-
-		/* 4. Remove trailing spaces */
-		len = strlen(start);
-		while (len > 0 && (start[len - 1] == ' ' || start[len - 1] == '\t'))
-		{
-			start[len - 1] = '\0';
-			len--;
-		}
-
-		/* Prepare clean command for execve */
-		args[0] = start;
-		args[1] = NULL;
 
 		child_pid = fork();
 		if (child_pid == -1)
@@ -62,6 +50,7 @@ int main(int ac, char **av)
 			exit(1);
 		}
 
+		 /** here skip the wmpty input */
 		if (child_pid == 0)
 		{
 			if (execve(args[0], args, environ) == -1)
@@ -78,3 +67,4 @@ int main(int ac, char **av)
 	}
 	return (0);
 }
+
