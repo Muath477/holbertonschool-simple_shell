@@ -1,22 +1,151 @@
 #include "main.h"
 
 /**
- * main - Simple Shell with argument handling using strtok
- * as Unused argument count
- * av Argument vector for error output
- * change the arrg in task 3 
- * Return: Always 0 on success.
+ * _getenv - look up an environment variable by name
+ * @name: variable name to search for, e.g. "PATH"
+ *
+ * getenv() is not on the list of allowed functions, so this walks
+ * environ by hand looking for "name=value".
+ *
+ * Return: pointer to the value part inside environ, or NULL if the
+ * variable isn't set
+ */
+char *_getenv(const char *name)
+{
+	int i;
+	size_t len;
+
+	len = strlen(name);
+	for (i = 0; environ[i] != NULL; i++)
+	{
+		if (strncmp(environ[i], name, len) == 0 && environ[i][len] == '=')
+			return (environ[i] + len + 1);
+	}
+	return (NULL);
+}
+
+/**
+ * get_cmd_path - find the full path to run a command
+ * @cmd: the command as typed by the user
+ *
+ * If cmd already contains a '/', it's treated as a path already (like
+ * /bin/ls or ./hsh) and just checked directly. Otherwise, every
+ * directory in PATH is tried until one has an executable with that
+ * name.
+ *
+ * Return: a malloc'd string with the full path, or NULL if the
+ * command can't be found anywhere
+ */
+char *get_cmd_path(char *cmd)
+{
+	char *path_env, *path_copy, *dir, *full_path;
+	size_t len;
+
+	if (strchr(cmd, '/') != NULL)
+	{
+		if (access(cmd, X_OK) != 0)
+			return (NULL);
+		full_path = malloc(strlen(cmd) + 1);
+		if (full_path != NULL)
+			strcpy(full_path, cmd);
+		return (full_path);
+	}
+
+	path_env = _getenv("PATH");
+	if (path_env == NULL)
+		return (NULL);
+	path_copy = malloc(strlen(path_env) + 1);
+	if (path_copy == NULL)
+		return (NULL);
+	strcpy(path_copy, path_env);
+
+	dir = strtok(path_copy, ":");
+	while (dir != NULL)
+	{
+		len = strlen(dir) + strlen(cmd) + 2;
+		full_path = malloc(len);
+		if (full_path == NULL)
+			break;
+		sprintf(full_path, "%s/%s", dir, cmd);
+		if (access(full_path, X_OK) == 0)
+		{
+			free(path_copy);
+			return (full_path);
+		}
+		free(full_path);
+		dir = strtok(NULL, ":");
+	}
+	free(path_copy);
+	return (NULL);
+}
+
+/**
+ * run_command - resolve a command through PATH, then fork and run it
+ * @args: NULL-terminated argument vector, args[0] is the command
+ * @av: the shell's own argv, av[0] is used as the program name in
+ * error messages
+ *
+ * If args[0] can't be resolved to a real file, we print the error and
+ * return without forking at all (no point forking to run nothing).
+ *
+ * Return: 0 normally, or 1 if fork() itself failed, meaning the shell
+ * should give up and exit
+ */
+int run_command(char **args, char **av)
+{
+	char *cmd_path;
+	pid_t child_pid;
+	int status;
+
+	cmd_path = get_cmd_path(args[0]);
+	if (cmd_path == NULL)
+	{
+		fprintf(stderr, "%s: %s: not found\n", av[0], args[0]);
+		return (0);
+	}
+
+	child_pid = fork();
+	if (child_pid == -1)
+	{
+		perror(av[0]);
+		free(cmd_path);
+		return (1);
+	}
+
+	if (child_pid == 0)
+	{
+		if (execve(cmd_path, args, environ) == -1)
+		{
+			perror(av[0]);
+			free(cmd_path);
+			exit(1);
+		}
+	}
+	else
+	{
+		wait(&status);
+		free(cmd_path);
+	}
+	return (0);
+}
+
+/**
+ * main - Simple Shell entry point, with PATH resolution and argument
+ * handling
+ * @ac: argument count (unused)
+ * @av: argument vector; av[0] is used as the program name in errors
+ *
+ * Return: always 0
  */
 int main(int ac, char **av)
 {
 	char *line = NULL;
 	size_t len = 0;
 	ssize_t read_bytes;
-	pid_t child_pid;
-	int status, i;
+	int i;
 	char *args[64];
 	char *token;
-	(void)ac; 
+	(void)ac;
 	/** all virables we need in the code */
 	while (1)
 	{
@@ -43,27 +172,10 @@ int main(int ac, char **av)
 		if (args[0] == NULL)
 			continue;
 
-		child_pid = fork();
-		if (child_pid == -1)
+		if (run_command(args, av) == 1)
 		{
-			perror(av[0]);
 			free(line);
 			exit(1);
-		}
-
-		 /** here skip the wmpty input */
-		if (child_pid == 0)
-		{
-			if (execve(args[0], args, environ) == -1)
-			{
-				perror(av[0]);
-				free(line);
-				exit(1);
-			}
-		}
-		else
-		{
-			wait(&status);
 		}
 	}
 	return (0);

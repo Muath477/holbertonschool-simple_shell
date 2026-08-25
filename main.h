@@ -15,5 +15,6 @@
 extern char **environ;
 char *_getenv(const char *name);
 char *get_cmd_path(char *cmd);
-/* to call the envir from the library to get the whole path */ 
+int run_command(char **args, char **av);
+
 #endif /* MAIN_H */
