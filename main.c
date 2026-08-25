@@ -84,24 +84,28 @@ char *get_cmd_path(char *cmd)
  * @args: NULL-terminated argument vector, args[0] is the command
  * @av: the shell's own argv, av[0] is used as the program name in
  * error messages
+ * @line_number: number of the input line this command came from, used
+ * in the "not found" error the same way sh uses it
  *
  * If args[0] can't be resolved to a real file, we print the error and
  * return without forking at all (no point forking to run nothing).
  *
- * Return: 0 normally, or 1 if fork() itself failed, meaning the shell
- * should give up and exit
+ * Return: the command's exit status (127 if it wasn't found), so the
+ * shell can exit with the same status sh would; or -1 if fork()
+ * itself failed, meaning the shell should give up and exit
  */
-int run_command(char **args, char **av)
+int run_command(char **args, char **av, int line_number)
 {
 	char *cmd_path;
 	pid_t child_pid;
-	int status;
+	int status = 0;
 
 	cmd_path = get_cmd_path(args[0]);
 	if (cmd_path == NULL)
 	{
-		fprintf(stderr, "%s: %s: not found\n", av[0], args[0]);
-		return (0);
+		fprintf(stderr, "%s: %d: %s: not found\n",
+			av[0], line_number, args[0]);
+		return (127);
 	}
 
 	child_pid = fork();
@@ -109,7 +113,7 @@ int run_command(char **args, char **av)
 	{
 		perror(av[0]);
 		free(cmd_path);
-		return (1);
+		return (-1);
 	}
 
 	if (child_pid == 0)
@@ -126,7 +130,27 @@ int run_command(char **args, char **av)
 		wait(&status);
 		free(cmd_path);
 	}
-	return (0);
+	return (WIFEXITED(status) ? WEXITSTATUS(status) : 1);
+}
+
+/**
+ * tokenize_line - split a line into a NULL-terminated array of words
+ * @line: the line to split; strtok cuts it in place
+ * @args: array to fill in, must be able to hold at least 64 pointers
+ */
+void tokenize_line(char *line, char **args)
+{
+	int i = 0;
+	char *token;
+
+	token = strtok(line, " \t\r\n\a");
+	while (token != NULL && i < 63)
+	{
+		args[i] = token;
+		token = strtok(NULL, " \t\r\n\a");
+		i++;
+	}
+	args[i] = NULL;
 }
 
 /**
@@ -135,18 +159,16 @@ int run_command(char **args, char **av)
  * @ac: argument count (unused)
  * @av: argument vector; av[0] is used as the program name in errors
  *
- * Return: always 0
+ * Return: the exit status of the last command run, like sh does
  */
 int main(int ac, char **av)
 {
 	char *line = NULL;
 	size_t len = 0;
 	ssize_t read_bytes;
-	int i;
+	int line_number = 0, last_status = 0;
 	char *args[64];
-	char *token;
 	(void)ac;
-	/** all virables we need in the code */
 	while (1)
 	{
 	if (isatty(STDIN_FILENO))
@@ -158,26 +180,18 @@ int main(int ac, char **av)
 		free(line);
 		break;
 	}
-	/** loop helps to see if the =order interactive or no */
-	i = 0;
-		token = strtok(line, " \t\r\n\a");
-		while (token != NULL && i < 63)
-		{
-			args[i] = token;
-			token = strtok(NULL, " \t\r\n\a");
-			i++;
-		}
-		args[i] = NULL;
-		/** token size input line into args array */
+	line_number++;
+		tokenize_line(line, args);
 		if (args[0] == NULL)
 			continue;
 
-		if (run_command(args, av) == 1)
+		last_status = run_command(args, av, line_number);
+		if (last_status == -1)
 		{
 			free(line);
 			exit(1);
 		}
 	}
-	return (0);
+	return (last_status);
 }
 

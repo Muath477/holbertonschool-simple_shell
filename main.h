@@ -15,6 +15,7 @@
 extern char **environ;
 char *_getenv(const char *name);
 char *get_cmd_path(char *cmd);
-int run_command(char **args, char **av);
+int run_command(char **args, char **av, int line_number);
+void tokenize_line(char *line, char **args);
 
 #endif /* MAIN_H */
