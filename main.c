@@ -185,6 +185,12 @@ int main(int ac, char **av)
 		if (args[0] == NULL)
 			continue;
 
+		if (strcmp(args[0], "exit") == 0)
+		{
+			free(line);
+			exit(last_status);
+		}
+
 		last_status = run_command(args, av, line_number);
 		if (last_status == -1)
 		{
