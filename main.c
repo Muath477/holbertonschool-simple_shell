@@ -4,6 +4,7 @@
  * main - Simple Shell with argument handling using strtok
  * as Unused argument count
  * av Argument vector for error output
+ * change the arrg in task 3 
  * Return: Always 0 on success.
  */
 int main(int ac, char **av)
