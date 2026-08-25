@@ -1,15 +1,15 @@
 #include "main.h"
 
 /**
- * main - Entry point for our simple shell 0.1
- * @ac: Argument count (we don't use it here)
- * @av: Argument vector (holds program name for perror)
+ * main - Entry point for simple shell 0.1 handling spaces
+ * @ac: Unused argument count
+ * @av: Argument vector for error reporting
  *
- * Return: Always 0 when it runs smoothly.
+ * Return: Always 0 on success.
  */
 int main(int ac, char **av)
 {
-	char *line = NULL;
+	char *line = NULL, *start;
 	size_t len = 0;
 	ssize_t read_bytes;
 	pid_t child_pid;
@@ -19,11 +19,9 @@ int main(int ac, char **av)
 
 	while (1)
 	{
-		/* Print prompt only when typing live in interactive mode */
 		if (isatty(STDIN_FILENO))
 			write(STDOUT_FILENO, "#cisfun$ ", 9);
 
-		/* Read line from user, clean memory if EOF (Ctrl+D) is hit */
 		read_bytes = getline(&line, &len, stdin);
 		if (read_bytes == -1)
 		{
@@ -31,19 +29,31 @@ int main(int ac, char **av)
 			break;
 		}
 
-		/* Remove trailing \n so execve gets clean file paths */
+		/* 1. Remove newline at the end */
 		if (line[read_bytes - 1] == '\n')
 			line[read_bytes - 1] = '\0';
 
-		/* Skip empty lines if user just hits enter */
-		if (line[0] == '\0')
+		/* 2. Skip leading spaces */
+		start = line;
+		while (*start == ' ' || *start == '\t')
+			start++;
+
+		/* 3. Skip empty line or lines with spaces only */
+		if (*start == '\0')
 			continue;
 
-		/* Prepare single-word command array ending with NULL for execve */
-		args[0] = line;
+		/* 4. Remove trailing spaces */
+		len = strlen(start);
+		while (len > 0 && (start[len - 1] == ' ' || start[len - 1] == '\t'))
+		{
+			start[len - 1] = '\0';
+			len--;
+		}
+
+		/* Prepare clean command for execve */
+		args[0] = start;
 		args[1] = NULL;
 
-		/* Fork a new process to run our command safely */
 		child_pid = fork();
 		if (child_pid == -1)
 		{
@@ -52,7 +62,6 @@ int main(int ac, char **av)
 			exit(1);
 		}
 
-		/* Inside child process: execute the given command */
 		if (child_pid == 0)
 		{
 			if (execve(args[0], args, environ) == -1)
@@ -62,7 +71,6 @@ int main(int ac, char **av)
 				exit(1);
 			}
 		}
-		/* Parent process: sit tight and wait until child finishes */
 		else
 		{
 			wait(&status);
