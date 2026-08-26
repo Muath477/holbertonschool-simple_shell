@@ -17,5 +17,5 @@ char *_getenv(const char *name);
 char *get_cmd_path(char *cmd);
 int run_command(char **args, char **av, int line_number);
 void tokenize_line(char *line, char **args);
-
+int handle_builtins(char **args, char *line, int last_status);
 #endif /* MAIN_H */
