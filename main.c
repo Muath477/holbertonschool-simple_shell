@@ -87,12 +87,8 @@ char *get_cmd_path(char *cmd)
  * @line_number: number of the input line this command came from, used
  * in the "not found" error the same way sh uses it
  *
- * If args[0] can't be resolved to a real file, we print the error and
- * return without forking at all (no point forking to run nothing).
- *
- * Return: the command's exit status (127 if it wasn't found), so the
- * shell can exit with the same status sh would; or -1 if fork()
- * itself failed, meaning the shell should give up and exit
+ * Return: the command's exit status (127 if it wasn't found);
+ * or -1 if fork() failed
  */
 int run_command(char **args, char **av, int line_number)
 {
@@ -154,33 +150,33 @@ void tokenize_line(char *line, char **args)
 }
 
 /**
- * main - Simple Shell entry point, with PATH resolution and argument
- * handling
+ * main - Simple Shell entry point with env built-in support
  * @ac: argument count (unused)
- * @av: argument vector; av[0] is used as the program name in errors
+ * @av: argument vector; av[0] is used as program name in errors
  *
- * Return: the exit status of the last command run, like sh does
+ * Return: the exit status of the last command run
  */
 int main(int ac, char **av)
 {
 	char *line = NULL;
 	size_t len = 0;
 	ssize_t read_bytes;
-	int line_number = 0, last_status = 0;
+	int line_number = 0, last_status = 0, i;
 	char *args[64];
 	(void)ac;
+
 	while (1)
 	{
-	if (isatty(STDIN_FILENO))
-	write(STDOUT_FILENO, "#cisfun$ ", 9);
+		if (isatty(STDIN_FILENO))
+			write(STDOUT_FILENO, "#cisfun$ ", 9);
 
-	read_bytes = getline(&line, &len, stdin);
-	if (read_bytes == -1)
-	{
-		free(line);
-		break;
-	}
-	line_number++;
+		read_bytes = getline(&line, &len, stdin);
+		if (read_bytes == -1)
+		{
+			free(line);
+			break;
+		}
+		line_number++;
 		tokenize_line(line, args);
 		if (args[0] == NULL)
 			continue;
@@ -189,6 +185,18 @@ int main(int ac, char **av)
 		{
 			free(line);
 			exit(last_status);
+		}
+
+		/* الإضافة الخاصة بـ Task 1.0 (env built-in) */
+		if (strcmp(args[0], "env") == 0)
+		{
+			for (i = 0; environ && environ[i]; i++)
+			{
+				write(STDOUT_FILENO, environ[i], strlen(environ[i]));
+				write(STDOUT_FILENO, "\n", 1);
+			}
+			last_status = 0;
+			continue;
 		}
 
 		last_status = run_command(args, av, line_number);
@@ -200,4 +208,3 @@ int main(int ac, char **av)
 	}
 	return (last_status);
 }
-
