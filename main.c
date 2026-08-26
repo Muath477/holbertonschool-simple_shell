@@ -1,40 +1,10 @@
 #include "main.h"
 
 /**
- * _getenv - look up an environment variable by name
- * @name: variable name to search for, e.g. "PATH"
- *
- * getenv() is not on the list of allowed functions, so this walks
- * environ by hand looking for "name=value".
- *
- * Return: pointer to the value part inside environ, or NULL if the
- * variable isn't set
- */
-char *_getenv(const char *name)
-{
-	int i;
-	size_t len;
-
-	len = strlen(name);
-	for (i = 0; environ[i] != NULL; i++)
-	{
-		if (strncmp(environ[i], name, len) == 0 && environ[i][len] == '=')
-			return (environ[i] + len + 1);
-	}
-	return (NULL);
-}
-
-/**
  * get_cmd_path - find the full path to run a command
  * @cmd: the command as typed by the user
  *
- * If cmd already contains a '/', it's treated as a path already (like
- * /bin/ls or ./hsh) and just checked directly. Otherwise, every
- * directory in PATH is tried until one has an executable with that
- * name.
- *
- * Return: a malloc'd string with the full path, or NULL if the
- * command can't be found anywhere
+ * Return: malloc'd string with full path, or NULL if not found
  */
 char *get_cmd_path(char *cmd)
 {
@@ -81,14 +51,11 @@ char *get_cmd_path(char *cmd)
 
 /**
  * run_command - resolve a command through PATH, then fork and run it
- * @args: NULL-terminated argument vector, args[0] is the command
- * @av: the shell's own argv, av[0] is used as the program name in
- * error messages
- * @line_number: number of the input line this command came from, used
- * in the "not found" error the same way sh uses it
+ * @args: NULL-terminated argument vector
+ * @av: shell argv for error messaging
+ * @line_number: current line number for errors
  *
- * Return: the command's exit status (127 if it wasn't found);
- * or -1 if fork() failed
+ * Return: command exit status or 127 if not found, -1 on fork failure
  */
 int run_command(char **args, char **av, int line_number)
 {
@@ -131,8 +98,8 @@ int run_command(char **args, char **av, int line_number)
 
 /**
  * tokenize_line - split a line into a NULL-terminated array of words
- * @line: the line to split; strtok cuts it in place
- * @args: array to fill in, must be able to hold at least 64 pointers
+ * @line: line to split
+ * @args: array to fill with tokens
  */
 void tokenize_line(char *line, char **args)
 {
@@ -150,18 +117,18 @@ void tokenize_line(char *line, char **args)
 }
 
 /**
- * main - Simple Shell entry point with env built-in support
+ * main - Simple Shell entry point
  * @ac: argument count (unused)
- * @av: argument vector; av[0] is used as program name in errors
+ * @av: argument vector
  *
- * Return: the exit status of the last command run
+ * Return: exit status of last command run
  */
 int main(int ac, char **av)
 {
 	char *line = NULL;
 	size_t len = 0;
 	ssize_t read_bytes;
-	int line_number = 0, last_status = 0, i;
+	int line_number = 0, last_status = 0;
 	char *args[64];
 	(void)ac;
 
@@ -181,20 +148,8 @@ int main(int ac, char **av)
 		if (args[0] == NULL)
 			continue;
 
-		if (strcmp(args[0], "exit") == 0)
+		if (handle_builtins(args, line, last_status))
 		{
-			free(line);
-			exit(last_status);
-		}
-
-		/* الإضافة الخاصة بـ Task 1.0 (env built-in) */
-		if (strcmp(args[0], "env") == 0)
-		{
-			for (i = 0; environ && environ[i]; i++)
-			{
-				write(STDOUT_FILENO, environ[i], strlen(environ[i]));
-				write(STDOUT_FILENO, "\n", 1);
-			}
 			last_status = 0;
 			continue;
 		}
