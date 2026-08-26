@@ -21,7 +21,7 @@ char *_getenv(const char *name)
 }
 
 /**
- * handle_builtins - check and execute internal shell commands
+ * handle_builtins - check and execute internal shell commands (exit & env)
  * @args: parsed command arguments
  * @line: memory allocated line to free before exit
  * @last_status: status code of last command
