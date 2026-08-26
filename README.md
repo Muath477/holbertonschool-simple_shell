@@ -38,4 +38,4 @@ echo "ls -l" | ./hsh
 
 ## Authors
 - Sara Alshahrani - sara12.shahrani@gmail.com
-- Moath Almuatiri - moathalmuatiri@gmail.com
+- Muath Almuatiri - moathalmuatiri@gmail.com
